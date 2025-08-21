@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { NextRequest } from "next/server";
 import { getCustomModelList, multiApiKeyPolling } from "@/utils/model";
 import { verifySignature } from "@/utils/signature";
+import { generateAuthToken } from "@/utils/vertexAuth";
 
 const NODE_ENV = process.env.NODE_ENV;
 const accessPassword = process.env.ACCESS_PASSWORD || "";
@@ -13,6 +14,11 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || "";
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || "";
 const XAI_API_KEY = process.env.XAI_API_KEY || "";
+const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY || "";
+const AZURE_API_KEY = process.env.AZURE_API_KEY || "";
+const GOOGLE_CLIENT_EMAIL = process.env.GOOGLE_CLIENT_EMAIL || "";
+const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY || "";
+const GOOGLE_PRIVATE_KEY_ID = process.env.GOOGLE_PRIVATE_KEY_ID || "";
 const OPENAI_COMPATIBLE_API_KEY = process.env.OPENAI_COMPATIBLE_API_KEY || "";
 // Search provider API key
 const TAVILY_API_KEY = process.env.TAVILY_API_KEY || "";
@@ -361,6 +367,127 @@ export async function middleware(request: NextRequest) {
       }
     }
   }
+  if (request.nextUrl.pathname.startsWith("/api/ai/mistral")) {
+    const authorization = request.headers.get("authorization") || "";
+    const isDisabledModel = await hasDisabledAIModel();
+    if (
+      !verifySignature(
+        authorization.substring(7),
+        accessPassword,
+        Date.now()
+      ) ||
+      disabledAIProviders.includes("mistral") ||
+      isDisabledModel
+    ) {
+      return NextResponse.json(
+        { error: ERRORS.NO_PERMISSIONS },
+        { status: 403 }
+      );
+    } else {
+      const apiKey = multiApiKeyPolling(MISTRAL_API_KEY);
+      if (apiKey) {
+        const requestHeaders = new Headers();
+        requestHeaders.set(
+          "Content-Type",
+          request.headers.get("Content-Type") || "application/json"
+        );
+        requestHeaders.set("Authorization", `Bearer ${apiKey}`);
+        return NextResponse.next({
+          request: {
+            headers: requestHeaders,
+          },
+        });
+      } else {
+        return NextResponse.json(
+          {
+            error: ERRORS.NO_API_KEY,
+          },
+          { status: 500 }
+        );
+      }
+    }
+  }
+  if (request.nextUrl.pathname.startsWith("/api/ai/azure")) {
+    const authorization = request.headers.get("api-key") || "";
+    const isDisabledModel = await hasDisabledAIModel();
+    if (
+      !verifySignature(authorization, accessPassword, Date.now()) ||
+      disabledAIProviders.includes("azure") ||
+      isDisabledModel
+    ) {
+      return NextResponse.json(
+        { error: ERRORS.NO_PERMISSIONS },
+        { status: 403 }
+      );
+    } else {
+      const apiKey = multiApiKeyPolling(AZURE_API_KEY);
+      if (apiKey) {
+        const requestHeaders = new Headers();
+        requestHeaders.set(
+          "Content-Type",
+          request.headers.get("Content-Type") || "application/json"
+        );
+        requestHeaders.set("api-key", apiKey);
+        return NextResponse.next({
+          request: {
+            headers: requestHeaders,
+          },
+        });
+      } else {
+        return NextResponse.json(
+          {
+            error: ERRORS.NO_API_KEY,
+          },
+          { status: 500 }
+        );
+      }
+    }
+  }
+  if (request.nextUrl.pathname.startsWith("/api/ai/google-vertex")) {
+    const authorization = request.headers.get("authorization") || "";
+    const isDisabledModel = await hasDisabledAIModel();
+    if (
+      !verifySignature(
+        authorization.substring(7),
+        accessPassword,
+        Date.now()
+      ) ||
+      disabledAIProviders.includes("google-vertex") ||
+      isDisabledModel
+    ) {
+      return NextResponse.json(
+        { error: ERRORS.NO_PERMISSIONS },
+        { status: 403 }
+      );
+    } else {
+      const apiKey = await generateAuthToken({
+        clientEmail: GOOGLE_CLIENT_EMAIL,
+        privateKey: GOOGLE_PRIVATE_KEY,
+        privateKeyId: GOOGLE_PRIVATE_KEY_ID,
+      });
+
+      if (apiKey) {
+        const requestHeaders = new Headers();
+        requestHeaders.set(
+          "Content-Type",
+          request.headers.get("Content-Type") || "application/json"
+        );
+        requestHeaders.set("Authorization", `Bearer ${apiKey}`);
+        return NextResponse.next({
+          request: {
+            headers: requestHeaders,
+          },
+        });
+      } else {
+        return NextResponse.json(
+          {
+            error: ERRORS.NO_API_KEY,
+          },
+          { status: 500 }
+        );
+      }
+    }
+  }
   // The pollinations model only verifies access to the backend API
   if (request.nextUrl.pathname.startsWith("/api/ai/pollinations")) {
     const authorization = request.headers.get("authorization") || "";
@@ -615,6 +742,59 @@ export async function middleware(request: NextRequest) {
       return NextResponse.json(
         { error: ERRORS.NO_PERMISSIONS },
         { status: 403 }
+      );
+    } else {
+      const requestHeaders = new Headers();
+      requestHeaders.set(
+        "Content-Type",
+        request.headers.get("Content-Type") || "application/json"
+      );
+      requestHeaders.delete("Authorization");
+      return NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      });
+    }
+  }
+  if (request.nextUrl.pathname.startsWith("/api/sse")) {
+    let authorization = request.headers.get("authorization") || "";
+    if (authorization !== "") {
+      authorization = authorization.substring(7);
+    } else if (request.method.toUpperCase() === "GET") {
+      authorization = request.nextUrl.searchParams.get("password") || "";
+    }
+    if (authorization !== accessPassword) {
+      return NextResponse.json(
+        { error: ERRORS.NO_PERMISSIONS },
+        { status: 403 }
+      );
+    } else {
+      const requestHeaders = new Headers();
+      requestHeaders.set(
+        "Content-Type",
+        request.headers.get("Content-Type") || "application/json"
+      );
+      requestHeaders.delete("Authorization");
+      return NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      });
+    }
+  }
+  if (request.nextUrl.pathname.startsWith("/api/mcp")) {
+    const authorization = request.headers.get("authorization") || "";
+    if (authorization.substring(7) !== accessPassword) {
+      const responseHeaders = new Headers();
+      responseHeaders.set("WWW-Authenticate", ERRORS.NO_PERMISSIONS.message);
+      return NextResponse.json(
+        {
+          error: 401,
+          error_description: ERRORS.NO_PERMISSIONS.message,
+          error_uri: request.nextUrl,
+        },
+        { headers: responseHeaders, status: 401 }
       );
     } else {
       const requestHeaders = new Headers();

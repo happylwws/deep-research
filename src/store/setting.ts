@@ -6,6 +6,13 @@ export interface SettingStore {
   mode: string;
   apiKey: string;
   apiProxy: string;
+  googleVertexProject: string;
+  googleVertexLocation: string;
+  googleClientEmail: string;
+  googlePrivateKey: string;
+  googlePrivateKeyId: string;
+  googleVertexThinkingModel: string;
+  googleVertexNetworkingModel: string;
   openRouterApiKey: string;
   openRouterApiProxy: string;
   openRouterThinkingModel: string;
@@ -26,6 +33,15 @@ export interface SettingStore {
   xAIApiProxy: string;
   xAIThinkingModel: string;
   xAINetworkingModel: string;
+  mistralApiKey: string;
+  mistralApiProxy: string;
+  mistralThinkingModel: string;
+  mistralNetworkingModel: string;
+  azureApiKey: string;
+  azureResourceName: string;
+  azureApiVersion: string;
+  azureThinkingModel: string;
+  azureNetworkingModel: string;
   openAICompatibleApiKey: string;
   openAICompatibleApiProxy: string;
   openAICompatibleThinkingModel: string;
@@ -43,10 +59,12 @@ export interface SettingStore {
   searchProvider: string;
   tavilyApiKey: string;
   tavilyApiProxy: string;
+  tavilyScope: string;
   firecrawlApiKey: string;
   firecrawlApiProxy: string;
   exaApiKey: string;
   exaApiProxy: string;
+  exaScope: string;
   bochaApiKey: string;
   bochaApiProxy: string;
   searxngApiProxy: string;
@@ -56,10 +74,14 @@ export interface SettingStore {
   crawler: string;
   language: string;
   theme: string;
-  debug: string;
+  debug: "enable" | "disable";
+  references: "enable" | "disable";
+  citationImage: "enable" | "disable";
+  smoothTextStreamType: "character" | "word" | "line";
+  onlyUseLocalResource: "enable" | "disable";
 }
 
-interface SettingFunction {
+interface SettingActions {
   update: (values: Partial<SettingStore>) => void;
   reset: () => void;
 }
@@ -70,7 +92,14 @@ export const defaultValues: SettingStore = {
   apiKey: "",
   apiProxy: "",
   thinkingModel: "gemini-2.0-flash-thinking-exp",
-  networkingModel: "gemini-2.0-flash-exp",
+  networkingModel: "gemini-2.0-flash",
+  googleVertexProject: "",
+  googleVertexLocation: "",
+  googleClientEmail: "",
+  googlePrivateKey: "",
+  googlePrivateKeyId: "",
+  googleVertexThinkingModel: "",
+  googleVertexNetworkingModel: "",
   openRouterApiKey: "",
   openRouterApiProxy: "",
   openRouterThinkingModel: "",
@@ -91,6 +120,15 @@ export const defaultValues: SettingStore = {
   xAIApiProxy: "",
   xAIThinkingModel: "",
   xAINetworkingModel: "",
+  mistralApiKey: "",
+  mistralApiProxy: "",
+  mistralThinkingModel: "mistral-large-latest",
+  mistralNetworkingModel: "mistral-medium-latest",
+  azureApiKey: "",
+  azureResourceName: "",
+  azureApiVersion: "",
+  azureThinkingModel: "",
+  azureNetworkingModel: "",
   openAICompatibleApiKey: "",
   openAICompatibleApiProxy: "",
   openAICompatibleThinkingModel: "",
@@ -106,10 +144,12 @@ export const defaultValues: SettingStore = {
   searchProvider: "model",
   tavilyApiKey: "",
   tavilyApiProxy: "",
+  tavilyScope: "general",
   firecrawlApiKey: "",
   firecrawlApiProxy: "",
   exaApiKey: "",
   exaApiProxy: "",
+  exaScope: "research paper",
   bochaApiKey: "",
   bochaApiProxy: "",
   searxngApiProxy: "",
@@ -120,10 +160,14 @@ export const defaultValues: SettingStore = {
   language: "",
   theme: "system",
   debug: "disable",
+  references: "enable",
+  citationImage: "enable",
+  smoothTextStreamType: "word",
+  onlyUseLocalResource: "disable",
 };
 
 export const useSettingStore = create(
-  persist<SettingStore & SettingFunction>(
+  persist<SettingStore & SettingActions>(
     (set) => ({
       ...defaultValues,
       update: (values) => set(values),

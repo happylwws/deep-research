@@ -10,7 +10,11 @@ const normalizeLocale = (locale: string) => {
     return "en-US";
   } else if (locale.startsWith("zh")) {
     return "zh-CN";
-  } else {
+  } else if (locale.startsWith("es")) {
+    return "es-ES";
+  } else if (locale.startsWith("vi")) {
+    return "vi-VN";
+  } else{
     return locale;
   }
 };
